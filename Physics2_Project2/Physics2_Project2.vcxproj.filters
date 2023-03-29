@@ -1,0 +1,161 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Texture Manager">
+      <UniqueIdentifier>{aad12df1-4b46-4cf9-8a2c-93a278f0386b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shader Manager">
+      <UniqueIdentifier>{f7ca69a3-641b-4898-a148-008d2ad7c32a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="File Stream">
+      <UniqueIdentifier>{a327c912-8c83-4052-af23-15a17c8b9b79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FBO">
+      <UniqueIdentifier>{12947161-7c78-405b-a0f0-4fa9169a6928}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VAO Manager">
+      <UniqueIdentifier>{05696942-bc35-4795-b961-44f0d66a9a09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Draw Mesh">
+      <UniqueIdentifier>{0aabf072-bde7-4ece-86bb-7c6ca0e021e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Light Manager">
+      <UniqueIdentifier>{ae1b8b25-f6db-4473-be64-ce87e7f00885}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mesh Class">
+      <UniqueIdentifier>{e0c3fb30-cf7c-4418-8358-02c84ef17a5b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Bounding Box">
+      <UniqueIdentifier>{ff2c11ca-d262-46b9-a4e7-11fa4fab22b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PLY File Loader">
+      <UniqueIdentifier>{5313cb3e-a4c2-4df2-ba0e-36b1779111ab}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cBasicTextureManager\C24BitBMPpixel.cpp">
+      <Filter>Texture Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cBasicTextureManager\cBasicTextureManager.cpp">
+      <Filter>Texture Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cBasicTextureManager\CTextureFromBMP.cpp">
+      <Filter>Texture Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cShaderManager\cShader.cpp">
+      <Filter>Shader Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cShaderManager\cShaderManager.cpp">
+      <Filter>Shader Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cShaderManager\cShaderProgram.cpp">
+      <Filter>Shader Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="glad.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cFBO\cFBO.cpp">
+      <Filter>FBO</Filter>
+    </ClCompile>
+    <ClCompile Include="cVAOManager\cVAOManager.cpp">
+      <Filter>VAO Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawMesh.cpp">
+      <Filter>Draw Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="cLightManager\cLight.cpp">
+      <Filter>Light Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cLightManager\cLightHelper.cpp">
+      <Filter>Light Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cLightManager\cLightManager.cpp">
+      <Filter>Light Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cMeshInfo.cpp">
+      <Filter>Mesh Class</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawBoundingBox.cpp">
+      <Filter>Bounding Box</Filter>
+    </ClCompile>
+    <ClCompile Include="PlyFileLoader\PlyFileLoader.cpp">
+      <Filter>PLY File Loader</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cBasicTextureManager\C24BitBMPpixel.h">
+      <Filter>Texture Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cBasicTextureManager\cBasicTextureManager.h">
+      <Filter>Texture Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cBasicTextureManager\CTextureFromBMP.h">
+      <Filter>Texture Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cShaderManager\cShader.h">
+      <Filter>Shader Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cShaderManager\cShaderManager.h">
+      <Filter>Shader Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cShaderManager\cShaderProgram.h">
+      <Filter>Shader Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cFBO\cFBO.h">
+      <Filter>FBO</Filter>
+    </ClInclude>
+    <ClInclude Include="cVAOManager\cVAOManager.h">
+      <Filter>VAO Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="DrawMesh.h">
+      <Filter>Draw Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="cLightManager\cLight.h">
+      <Filter>Light Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cLightManager\cLightHelper.h">
+      <Filter>Light Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cLightManager\cLightManager.h">
+      <Filter>Light Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="cMeshInfo.h">
+      <Filter>Mesh Class</Filter>
+    </ClInclude>
+    <ClInclude Include="DrawBoundingBox.h">
+      <Filter>Bounding Box</Filter>
+    </ClInclude>
+    <ClInclude Include="PlyFileLoader\PlyFileLoader.h">
+      <Filter>PLY File Loader</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="readFile.txt">
+      <Filter>File Stream</Filter>
+    </Text>
+    <Text Include="sceneDescription.txt">
+      <Filter>File Stream</Filter>
+    </Text>
+  </ItemGroup>
+</Project>
