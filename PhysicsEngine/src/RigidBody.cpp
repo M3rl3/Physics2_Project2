@@ -1,171 +1,127 @@
-#include "../include/RigidBody.h"
+#include "RigidBody.h"
+#include "Conversion.h"
+
+#include <BulletCollision/btBulletCollisionCommon.h>
 
 namespace physics {
 
-	RigidBody::RigidBody() {
-	}
-
-	RigidBody::RigidBody(const RigidBody&) {
-	}
-
-	RigidBody::RigidBody(const RigidBodyDesc& desc, iShape* shape) : 
-		iRigidBody(),
-		shape(shape),
-		position(desc.position),
-		rotation(desc.rotation),
-		isStatic(desc.isStatic),
-		linearVelocity(desc.linearVelocity),
-		angularVelocity(desc.angularVelocity),
-		restitution(desc.restitution),
-		friction(desc.friction),
-		linearDamping(desc.linearDamping),
-		angularDamping(desc.angularDamping)
+	RigidBody::RigidBody(const RigidBodyDesc& desc, iShape* shape)
+		: iRigidBody()
 	{
-		if (isStatic || desc.mass <= 0.f) {
-			mass = 0.f;
-			invMass = 0.f;
-			isStatic = true;
-		}
-		else
+		btQuaternion rotation;
+		btVector3 position;
+
+		CastBulletQuaternion(desc.rotation, &rotation);
+		CastBulletVector3(desc.position, &position);
+
+		btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(rotation, position));
+		btVector3 inertia(0, 0, 0);
+		btCollisionShape* bulletShape = CastBulletShape(shape);
+
+		if (desc.mass != 0.0f)
 		{
-			mass = desc.mass;
-			invMass = 1.f / mass;
+			bulletShape->calculateLocalInertia(desc.mass, inertia);
 		}
+
+		btRigidBody::btRigidBodyConstructionInfo bodyCI(desc.mass, motionState, bulletShape, inertia);
+
+		bulletRigidBody = new btRigidBody(bodyCI);
+
+		btVector3 btAngularFactor;
+		btVector3 btLinearFactor;
+
+		CastBulletVector3(desc.angularFactor, &btAngularFactor);
+		CastBulletVector3(desc.linearFactor, &btLinearFactor);
+
+		bulletRigidBody->setAngularFactor(btAngularFactor);
+		bulletRigidBody->setLinearFactor(btLinearFactor);
 	}
 
-	RigidBody::~RigidBody() {
-	}
+	RigidBody::~RigidBody()
+	{ }
 
-	RigidBody* RigidBody::Cast(iCollisionBody* body) {
+	RigidBody* RigidBody::Cast(iCollisionBody* body)
+	{
 		return dynamic_cast<RigidBody*>(body);
 	}
 
-	bool RigidBody::IsStatic() {
-		return isStatic;
+	void RigidBody::GetPosition(Vector3& position)
+	{
+		CastGLMVec3(bulletRigidBody->getCenterOfMassPosition(), &position);
 	}
 
-	void RigidBody::SetRenderPosition(glm::vec3* position) {
-		this->renderPosition = position;
+	void RigidBody::SetPosition(const Vector3& position)
+	{
+		// No.
 	}
 
-	// Subject to change
-	void RigidBody::Update(float v) {
-		if (renderPosition != nullptr) {
-			renderPosition->x += v;
-			renderPosition->y += v;
-			renderPosition->z += v;
-		}
+	void RigidBody::GetRotation(Quaternion& rotation)
+	{
+		CastGLMQuat(bulletRigidBody->getOrientation(), &rotation);
 	}
 
-	iShape* RigidBody::GetShape() {
-		return this->shape;
+	void RigidBody::SetRotation(const Quaternion& rotation)
+	{
+		// No.
 	}
 
-	void RigidBody::GetPosition(glm::vec3& position) {
-		position = this->position;
+	void RigidBody::ApplyForce(const Vector3& force)
+	{
+		btVector3 btForce;
+		CastBulletVector3(force, &btForce);
+		bulletRigidBody->applyCentralForce(btForce);
 	}
 
-	void RigidBody::SetPosition(const glm::vec3& position) {
-		this->position = position;
+	void RigidBody::ApplyForceAtPoint(const Vector3& force, const Vector3& relativePoint)
+	{
+		btVector3 btForce;
+		btVector3 btForceAtPoint;
+
+		CastBulletVector3(force, &btForce);
+		CastBulletVector3(relativePoint, &btForceAtPoint);
+
+		bulletRigidBody->applyForce(btForce, btForceAtPoint);
 	}
 
-	void RigidBody::GetRotation(glm::quat& rotation) {
-		rotation = this->rotation;
+	void RigidBody::ApplyImpulse(const Vector3& impulse)
+	{
+		btVector3 btImpulse;
+		CastBulletVector3(impulse, &btImpulse);
+		bulletRigidBody->applyCentralImpulse(btImpulse);
 	}
 
-	void RigidBody::SetRotation(const glm::quat& rotation) {
-		this->rotation = rotation;
+	void RigidBody::ApplyImpulseAtPoint(const Vector3& impulse, const Vector3& relativePoint)
+	{
+		btVector3 btImpulse;
+		btVector3 btImpulseAtPoint;
+
+		CastBulletVector3(impulse, &btImpulse);
+		CastBulletVector3(relativePoint, &btImpulseAtPoint);
+
+		bulletRigidBody->applyImpulse(btImpulse, btImpulseAtPoint);
 	}
 
-	void RigidBody::ApplyForce(const glm::vec3& force) {
-		this->force += force;
+	void RigidBody::ApplyTorque(const Vector3& torque)
+	{
+		btVector3 btTorque;
+
+		CastBulletVector3(torque, &btTorque);
+
+		bulletRigidBody->applyTorque(btTorque);
 	}
 
-	void RigidBody::ApplyForceAtPoint(const glm::vec3& force, const glm::vec3& relativePoint) {
-		ApplyForce(force);
-		ApplyTorque(glm::cross(relativePoint, force));
+	void RigidBody::ApplyTorqueImpulse(const Vector3& torqueImpulse)
+	{
+		btVector3 btTorqueImpulse;
+
+		CastBulletVector3(torqueImpulse, &btTorqueImpulse);
+
+		bulletRigidBody->applyTorqueImpulse(btTorqueImpulse);
 	}
 
-	void RigidBody::ApplyImpulse(const glm::vec3& impulse) {
-		this->linearVelocity += impulse * this->invMass;
-	}
-
-	void RigidBody::ApplyImpulseAtPoint(const glm::vec3& impulse, const glm::vec3& relativePoint) {
-		ApplyTorqueImpulse(glm::cross(relativePoint, impulse));
-	}
-
-	void RigidBody::ApplyTorque(const glm::vec3& torque) {
-		this->torque += torque;
-	}
-
-	void RigidBody::ApplyTorqueImpulse(const glm::vec3& torqueImpulse) {
-		this->angularVelocity = torqueImpulse;
-	}
-
-	void RigidBody::SetGravityAcceleration(const glm::vec3& gravity) {
-		this->gravity = gravity;
-	}
-
-	void RigidBody::UpdateAcceleration() {
-
-		if (this->isStatic)
-			return;
-
-		this->linearAcceleration = this->force * this->invMass + this->gravity;
-		this->angularAcceleration = this->torque;
-	}
-
-	void RigidBody::VerletStep1(float dt) {
-
-		if (this->isStatic) {
-			return;
-		}
-
-		this->previousPosition = this->position;
-		this->position += (this->linearVelocity + this->linearAcceleration * (dt * 0.5f)) * dt;
-
-		glm::vec3 rotationAxis = (this->angularVelocity + this->angularAcceleration * (dt * 0.5f)) * dt;
-
-		float rotationAngle = glm::length(rotationAxis);
-
-		rotationAxis = glm::normalize(rotationAxis);
-
-		if (rotationAngle != 0.f) {
-			glm::quat rot = glm::angleAxis(rotationAngle, rotationAxis);
-			this->rotation *= rot;
-		}
-	}
-
-	void RigidBody::VerletStep2(float dt) {
-
-		if (this->isStatic)
-			return;
-
-		this->linearVelocity += this->linearAcceleration * (dt * 0.5f);
-		this->angularVelocity += this->angularAcceleration * (dt * 0.5f);
-	}
-
-	void RigidBody::VerletStep3(float dt) {
-		VerletStep2(dt);
-	}
-
-	void RigidBody::KillForces() {
-
-		this->force = glm::vec3(0.f);
-		this->torque = glm::vec3(0.f);
-	}
-
-	void RigidBody::ApplyDamping(float dt) {
-
-		this->linearVelocity *= pow(1.f - this->linearDamping, dt);
-		this->angularVelocity *= pow(1.f - this->angularDamping, dt);
-
-		if (glm::length(this->linearVelocity) < 0.001f) {
-			this->linearVelocity = glm::vec3(0.f);
-		}
-		if (glm::length(this->angularVelocity) < 0.001f) {
-			this->angularVelocity = glm::vec3(0.f);
-		}
+	btRigidBody* RigidBody::GetBulletBody(void)
+	{
+		return bulletRigidBody;
 	}
 }
 

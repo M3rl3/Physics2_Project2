@@ -16,7 +16,9 @@
 #include <iPhysicsWorld.h>
 #include <iShape.h>
 #include <SphereShape.h>
+#include <BoxShape.h>
 #include <PlaneShape.h>
+#include <CylinderShape.h>
 
 #include "PlyFileLoader/PlyFileLoader.h"
 #include "cShaderManager/cShaderManager.h"
@@ -54,12 +56,14 @@ sModelDrawInfo player_obj;
 cMeshInfo* full_screen_quad;
 cMeshInfo* skybox_sphere_mesh;
 cMeshInfo* player_mesh;
+cMeshInfo* cube;
 
 cMeshInfo* bulb_mesh;
 cLight* pointLight;
 
 unsigned int readIndex = 0;
 int object_index = 0;
+int throwableIndex = 0;
 int elapsed_frames = 0;
 
 bool enableMouse = false;
@@ -68,6 +72,9 @@ bool mouseClick = false;
 
 std::vector <std::string> meshFiles;
 std::vector <cMeshInfo*> meshArray;
+std::vector <cMeshInfo*> throwables;
+std::vector <cMeshInfo*> cylinders;
+std::vector <cMeshInfo*> temp;
 
 void ReadFromFile();
 void LoadTextures();
@@ -87,6 +94,12 @@ void CreateSkyBoxSphere();
 void LoadTextures();
 void CreateBall(std::string modelName, glm::vec3 position, glm::vec4 color, float mass);
 void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, glm::vec3 normal, glm::vec3 size, glm::vec4 color, float mass);
+void CreateCube(std::string modelName, glm::vec3 position, glm::vec4 color, float mass);
+void CreateCylinder(std::string modelName, glm::vec3 position, glm::vec4 color, float mass);
+void CreateCylinders();
+
+void HardReset();
+void Reset();
 
 const glm::vec3 origin = glm::vec3(0);
 const glm::mat4 matIdentity = glm::mat4(1.0f);
@@ -157,6 +170,19 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
     {
         theEditMode = MOVING_LIGHT;
     }
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+        HardReset();
+    }
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    {
+        CreateBall("ball", 
+            glm::vec3(RandomFloat(-100, 100), RandomFloat(20, 50), RandomFloat(-100, 100)),   // position
+            glm::vec4(RandomFloat(0, 1), RandomFloat(0, 1), RandomFloat(0, 1), 1),            // color
+            RandomFloat(1, 3));                                                               // size
+    }
+    if (key == GLFW_KEY_DELETE && action == GLFW_PRESS) {
+        Reset();
+    }
     // Wireframe
     if (key == GLFW_KEY_X && action == GLFW_PRESS) {
         for (int i = 0; i < meshArray.size(); i++) {
@@ -173,14 +199,6 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
     }
     if (key == GLFW_KEY_LEFT_ALT && action == GLFW_RELEASE) {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    }
-    /* 
-    *    updates translation of all objects in the scene based on changes made to scene 
-    *    description files, resets everything if no changes were made
-    */
-    if (key == GLFW_KEY_U && action == GLFW_PRESS) {
-        ReadSceneDescription(meshArray);
-        camera->position = initCamera;
     }
     // Enable mouse look
     if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
@@ -302,16 +320,31 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
 
             if (action == GLFW_PRESS) {
                 if (key == GLFW_KEY_W) {
-                    direction.z += MOVE_SPEED;
+                    direction += MOVE_SPEED * camera->target;
+                    direction.y = 0;
                 }
-                if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-                    direction.z -= MOVE_SPEED;
+                if (key == GLFW_KEY_S) {
+                    direction += -MOVE_SPEED * camera->target;
+                    direction.y = 0;
                 }
-                if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-                    direction.x += MOVE_SPEED;
+                if (key == GLFW_KEY_A) {
+                    glm::vec3 strafeDirection = glm::cross(camera->target, camera->up);
+                    direction += -MOVE_SPEED * strafeDirection;
                 }
-                if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-                    direction.x -= MOVE_SPEED;
+                if (key == GLFW_KEY_D) {
+                    glm::vec3 strafeDirection = glm::cross(camera->target, camera->up);
+                    direction += -MOVE_SPEED * strafeDirection;
+                }
+
+                if (key == GLFW_KEY_EQUAL) {
+                    if (throwableIndex != throwables.size()) {
+                        throwableIndex++;
+                    }
+                }
+                if (key == GLFW_KEY_MINUS) {
+                    if (throwableIndex != 0) {
+                        throwableIndex--;
+                    }
                 }
             }
             else if (action == GLFW_RELEASE) {
@@ -450,8 +483,8 @@ void Render() {
     physicsWorld = physicsFactory->CreateWorld();
 
     // Set Gravity
-    // physicsWorld->SetGravity(glm::vec3(0.f, -9.8f, 0.f));
-    physicsWorld->SetGravity(glm::vec3(0.f, 0.f, 0.f));
+    physicsWorld->SetGravity(glm::vec3(0.f, -9.8f, 0.f));
+    // physicsWorld->SetGravity(glm::vec3(0.f, 0.f, 0.f));
 
     // FBO
     std::cout << "\nCreating FBO..." << std::endl;
@@ -557,23 +590,14 @@ void Render() {
 
     CreatePlayerBall(glm::vec3(0, 2, 0), 1.f);
 
-    // other balls created here
-    CreateBall("ball0", glm::vec3(20, 2, 0), glm::vec4(10, 0, 0, 1), 2.f);
-    CreateBall("ball1", glm::vec3(0, 2, 20), glm::vec4(0, 10, 0, 10), 1.f);
-    CreateBall("ball2", glm::vec3(0, 2, -20), glm::vec4(0, 0, 10, 1), 1.25f);
-    CreateBall("ball3", glm::vec3(-20, 2, 0), glm::vec4(10, 10, 0, 1), 1.5f);
-
-    // arena walls created here
-    CreateWall("wall0", glm::vec3(100, 0, 0), glm::vec3(0.f, 67.55f, 0.f), glm::vec3(1, 0, 0), glm::vec3(1, 0.1, 1), terrainColor, 1.f);
-    CreateWall("wall1", glm::vec3(-100, 0, 0), glm::vec3(0.f, -67.55f, 0.f), glm::vec3(-1, 0, 0), glm::vec3(1, 0.1, 1), terrainColor, 1.f);
-    CreateWall("wall2", glm::vec3(0, 0, 100), glm::vec3(0.f), glm::vec3(0, 0, 1), glm::vec3(1, -0.1, 1), terrainColor, 1.f);
-    CreateWall("wall3", glm::vec3(0, 0, -100), glm::vec3(0.f, 135.1f, 0.f), glm::vec3(0, 0, -1), glm::vec3(1, -0.1, 1), terrainColor, 1.f);
+    CreateCylinders();
     
     // all textures loaded here
     LoadTextures();
 
+    temp = meshArray;
     // reads scene descripion files for positioning and other info
-    //ReadSceneDescription(meshArray);
+    // ReadSceneDescription(meshArray);
 }
 
 void Update() {
@@ -641,43 +665,84 @@ void Update() {
         }
     }
 
-    // convert player colliding body to rigid body
-    physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(player_mesh->collisionBody);
-
-    // check if they need physics applied to them
-    if (rigidBody != nullptr) {
-
-        float force = 0.15f;
-        float damping = 0.9f;
-
-        // direction coming in from user inputs
-        rigidBody->ApplyTorque((direction * force) * damping);
-        rigidBody->ApplyForce((direction * force) * damping);
-        rigidBody->ApplyForceAtPoint(direction * force, glm::vec3(0.f, 5.f, 0.f));
-
-        //rigidBody->ApplyImpulse((direction * force) * damping);
-        //rigidBody->ApplyImpulseAtPoint(direction * force, glm::vec3(0.f, 5.f, 0.f));
-
-        rigidBody->GetPosition(player_mesh->position);
-        rigidBody->GetRotation(player_mesh->rotation);
-    }
-
     for (int i = 0; i < meshArray.size(); i++) {
 
         cMeshInfo* currentMesh = meshArray[i];
-         
+
         // Draw all the meshes pushed onto the vector
-        DrawMesh(currentMesh,           // theMesh
-                 model,                 // Model Matrix
-                 shaderID,              // Compiled Shader ID
-                 TextureMan,            // Instance of the Texture Manager
-                 VAOMan,                // Instance of the VAO Manager
-                 camera,                // Instance of the struct Camera
-                 modelLocaction,        // UL for model matrix
-                 modelInverseLocation); // UL for transpose of model matrix
-        
+        DrawMesh(currentMesh,      // theMesh
+            model,                 // Model Matrix
+            shaderID,              // Compiled Shader ID
+            TextureMan,            // Instance of the Texture Manager
+            VAOMan,                // Instance of the VAO Manager
+            camera,                // Instance of the struct Camera
+            modelLocaction,        // UL for model matrix
+            modelInverseLocation); // UL for transpose of model matrix
+
         // Physics update step
         physicsWorld->TimeStep(0.06f);
+    }
+
+    if (throwables.size() != 0) {
+        for (int i = 0; i < throwables.size(); i++) {
+
+            cMeshInfo* currentMesh = throwables[i];
+
+            // convert player colliding body to rigid body
+            physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(player_mesh->collisionBody);
+
+            // check if they need physics applied to them
+            if (rigidBody != nullptr) {
+
+                float force = 100.f;
+                float damping = 1.0f;
+
+                // direction coming in from user inputs
+                rigidBody->ApplyTorque((direction * force) * damping);
+                rigidBody->ApplyForce((direction * force) * damping);
+                rigidBody->ApplyForceAtPoint(direction * force, glm::vec3(0.f, 5.f, 0.f));
+
+                //rigidBody->ApplyImpulse((direction * force) * damping);
+                //rigidBody->ApplyImpulseAtPoint(direction * force, glm::vec3(0.f, 5.f, 0.f));
+
+                rigidBody->GetPosition(player_mesh->position);
+                rigidBody->GetRotation(player_mesh->rotation);
+            }
+
+            if (currentMesh->scale.x > 2) {
+                model += glm::translate(glm::mat4x4(1.f), glm::vec3(0.f, 1.5f, 0.f));
+            }
+            if (currentMesh->scale.x > 1) {
+                model += glm::translate(glm::mat4x4(1.f), glm::vec3(0.f, 0.5f, 0.f));
+            }
+
+            // Draw all the meshes pushed onto the vector
+            DrawMesh(currentMesh,      // theMesh
+                model,                 // Model Matrix
+                shaderID,              // Compiled Shader ID
+                TextureMan,            // Instance of the Texture Manager
+                VAOMan,                // Instance of the VAO Manager
+                camera,                // Instance of the struct Camera
+                modelLocaction,        // UL for model matrix
+                modelInverseLocation); // UL for transpose of model matrix
+        }
+    }
+
+    if (cylinders.size() != 0) {
+        for (int i = 0; i < cylinders.size(); i++) {
+
+            cMeshInfo* currentMesh = cylinders[i];
+
+            // Draw all the meshes pushed onto the vector
+            DrawMesh(currentMesh,      // theMesh
+                model,                 // Model Matrix
+                shaderID,              // Compiled Shader ID
+                TextureMan,            // Instance of the Texture Manager
+                VAOMan,                // Instance of the VAO Manager
+                camera,                // Instance of the struct Camera
+                modelLocaction,        // UL for model matrix
+                modelInverseLocation); // UL for transpose of model matrix
+        }
     }
 
     // Draw the skybox
@@ -721,6 +786,12 @@ void Update() {
                 << "    Light Atten: " << "(" << constLightAtten.x << ", " << constLightAtten.y << ", " << constLightAtten.z << ")"
                 << "    Ambient Light: " << ambientLight
                 ;
+        }
+        else if (theEditMode == TAKE_CONTROL) {
+            ss << " Camera: " << "(" << camera->position.x << ", " << camera->position.y << ", " << camera->position.z << ")"
+                << "    Current Sphere: " << throwableIndex
+                << "    Total Spheres: " << throwables.size();
+               ;
         }
         else {
             ss << " Camera: " << "(" << camera->position.x << ", " << camera->position.y << ", " << camera->position.z << ")"
@@ -1033,6 +1104,12 @@ void LoadPlyFilesIntoVAO(void)
     plyLoader->LoadModel(meshFiles[2], wall_cube);
     if (!VAOMan->LoadModelIntoVAO("wall_cube", wall_cube, shaderID)) {
         std::cerr << "Could not load model into VAO" << std::endl;
+    } 
+    
+    sModelDrawInfo cylinder;
+    plyLoader->LoadModel(meshFiles[11], cylinder);
+    if (!VAOMan->LoadModelIntoVAO("cylinder", cylinder, shaderID)) {
+        std::cerr << "Could not load model into VAO" << std::endl;
     }
 
     sModelDrawInfo beholder;
@@ -1058,12 +1135,6 @@ void LoadPlyFilesIntoVAO(void)
 
 void CreateFlatPlane(glm::vec4 color) {
 
-    /*sModelDrawInfo flat_plain;
-    plyLoader->LoadModel(meshFiles[9], flat_plain);
-    if (!VAOMan->LoadModelIntoVAO("flat_plain", flat_plain, shaderID)) {
-        std::cerr << "Could not load model into VAO" << std::endl;
-    }*/
-
     cMeshInfo* plain_mesh = new cMeshInfo();
 
     float size = 1.f;
@@ -1073,7 +1144,7 @@ void CreateFlatPlane(glm::vec4 color) {
 
     plain_mesh->position = glm::vec3(0.f);
     plain_mesh->scale = glm::vec3(size);
-    plain_mesh->rotation = glm::quat(glm::vec3(glm::radians(-90.f), 0.f, 0.f));
+    plain_mesh->rotation = glm::quat(glm::vec3(0.f, 0.f, 0.f));
 
     plain_mesh->useRGBAColour = true;
     plain_mesh->RGBAColour = color;
@@ -1096,11 +1167,6 @@ void CreateFlatPlane(glm::vec4 color) {
 
 void CreatePlayerBall(glm::vec3 position, float size) {
 
-    /*unsigned int playerModelID = plyLoader->LoadModel(meshFiles[7], player_obj);
-
-    if (!VAOMan->LoadModelIntoVAO("player", player_obj, shaderID)) {
-        std::cerr << "Could not load model into VAO" << std::endl;
-    }*/
     player_mesh = new cMeshInfo();
     player_mesh->meshName = "player";
     player_mesh->friendlyName = "player";
@@ -1150,7 +1216,71 @@ void CreateBall(std::string modelName, glm::vec3 position, glm::vec4 color, floa
     ball->collisionBody = physicsFactory->CreateRigidBody(description, ballShape);
     physicsWorld->AddBody(ball->collisionBody);
 
-    meshArray.push_back(ball);
+    throwables.push_back(ball);
+}
+
+void CreateCylinder(std::string modelName, glm::vec3 position, glm::vec4 color, float mass) {
+
+    cMeshInfo* cylinder = new cMeshInfo();
+    cylinder->meshName = "cylinder";
+    cylinder->friendlyName = modelName;
+
+    cylinder->position = position;
+    cylinder->SetUniformScale(mass);
+    cylinder->RGBAColour = color;
+    cylinder->useRGBAColour = true;
+
+    physics::iShape* cylinderShape = new physics::CylinderShape(glm::vec3(1.f));
+    physics::RigidBodyDesc description;
+    description.isStatic = false;
+    description.mass = mass * 0.5f;
+    description.position = position;
+    description.linearVelocity = glm::vec3(0.f);
+
+    cylinder->collisionBody = physicsFactory->CreateRigidBody(description, cylinderShape);
+    physicsWorld->AddBody(cylinder->collisionBody);
+
+    cylinders.push_back(cylinder);
+}
+
+void CreateCylinders() {
+
+    float cylinderSize = 1.f;
+
+    CreateCylinder("cylinder0", glm::vec3(10, 2, 0), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder1", glm::vec3(15, 2, 0), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder2", glm::vec3(20, 2, 0), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder3", glm::vec3(25, 2, 0), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder4", glm::vec3(12.5, 2, 5), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder5", glm::vec3(17.5, 2, 5), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder6", glm::vec3(22.5, 2, 5), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder7", glm::vec3(15, 2, 10), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder8", glm::vec3(20, 2, 10), glm::vec4(1), cylinderSize);
+    CreateCylinder("cylinder9", glm::vec3(17.5, 2, 15), glm::vec4(1), cylinderSize);
+}
+
+void CreateCube(std::string modelName, glm::vec3 position, glm::vec4 color, float mass) {
+
+    cube = new cMeshInfo();
+    cube->meshName = "wall_cube";
+    cube->friendlyName = modelName;
+
+    cube->position = position;
+    cube->SetUniformScale(mass);
+    cube->RGBAColour = color;
+    cube->useRGBAColour = true;
+
+    physics::iShape* cubeShape = new physics::BoxShape(glm::vec3(1.f));
+    physics::RigidBodyDesc description;
+    description.isStatic = false;
+    description.mass = mass;
+    description.position = position;
+    description.linearVelocity = glm::vec3(0.f);
+
+    cube->collisionBody = physicsFactory->CreateRigidBody(description, cubeShape);
+    physicsWorld->AddBody(cube->collisionBody);
+
+    meshArray.push_back(cube);
 }
 
 void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, glm::vec3 normal, glm::vec3 size, glm::vec4 color, float mass) {
@@ -1235,6 +1365,32 @@ void CreateSkyBoxSphere() {
     skybox_sphere_mesh->friendlyName = "skybox_sphere";
     skybox_sphere_mesh->isSkyBoxMesh = true;
     meshArray.push_back(skybox_sphere_mesh);
+}
+
+void HardReset() {
+    if (cylinders.size() != 0) {
+        for (int i = 0; i < meshArray.size(); i++) {
+            delete cylinders[i];
+        }
+        cylinders.clear();
+        CreateCylinders();
+    }
+
+    if (throwables.size() != 0) {
+        for (int i = 0; i < throwables.size(); i++) {
+            delete throwables[i];
+        }
+        throwables.clear();
+    }
+}
+
+void Reset() {
+    if (throwables.size() != 0) {
+        for (int i = 0; i < throwables.size(); i++) {
+            delete throwables[i];
+        }
+        throwables.clear();
+    }
 }
 
 int main(int argc, char** argv) {

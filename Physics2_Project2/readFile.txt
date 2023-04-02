@@ -7,5 +7,6 @@
 ../assets/meshes/skybox_sphere.ply
 ../assets/meshes/sphere.ply
 ../assets/meshes/steve.ply
-../assets/meshes/plane.ply
+../assets/meshes/plane_reoriented.ply
 ../assets/meshes/quad.ply
+../assets/meshes/cylinder.ply

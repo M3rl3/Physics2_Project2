@@ -1,21 +1,14 @@
 #pragma once
 
-#include "../interfaces/iPhysicsWorld.h"
+#include <bullet/btBulletDynamicsCommon.h>
+#include <bullet/btBulletCollisionCommon.h>
 
+#include "iPhysicsWorld.h"
 #include "RigidBody.h"
-#include "CollisionHandler.h"
 
 #include <vector>
 
 namespace physics {
-
-	class CollisionListener : public iCollisionListener {
-	public:
-		CollisionListener();
-		virtual ~CollisionListener();
-
-		virtual void NotifyCollision(iCollisionBody* bodyA, iCollisionBody* bodyB) override;
-	};
 
 	class PhysicsWorld : public iPhysicsWorld {
 	public:
@@ -31,16 +24,19 @@ namespace physics {
 
 		virtual void RegisterCollisionListener(iCollisionListener* listener) override;
 
+		btDiscreteDynamicsWorld* GetDynamicsWorld(void);
+
 	private:
 
-		glm::vec3 gravity;
-
-		std::vector <iCollisionBody*> collisionBodies;
-		std::vector <RigidBody*> rigidBodies;
-
-		CollisionHandler* collisionHandler;
-		iCollisionListener* collisionListener;
+		btDefaultCollisionConfiguration* collisionConfiguration;
+		btCollisionDispatcher* dispatcher;
+		btBroadphaseInterface* broadphase;
+		btSequentialImpulseConstraintSolver* solver;
+		btDiscreteDynamicsWorld* dynamicsWorld;
 
 		PhysicsWorld(const PhysicsWorld&);
+		PhysicsWorld& operator=(const PhysicsWorld&) {
+			return *this;
+		}
 	};
  }

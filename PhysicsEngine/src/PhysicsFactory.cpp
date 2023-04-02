@@ -13,7 +13,10 @@ namespace physics {
 
 	iPhysicsWorld* PhysicsFactory::CreateWorld()
 	{
-		return new PhysicsWorld();
+		PhysicsWorld* world = new PhysicsWorld();
+
+		dynamicsWorld = world->GetDynamicsWorld();
+		return world;
 	}
 
 	iRigidBody* PhysicsFactory::CreateRigidBody(const RigidBodyDesc& desc, iShape* shape)

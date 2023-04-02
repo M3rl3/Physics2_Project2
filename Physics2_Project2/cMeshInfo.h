@@ -50,6 +50,7 @@ public:
 	bool isSkyBoxMesh;
 	bool hasChildMeshes;
 	bool isAnimated;
+	bool isControllable;
 
 	int nTriangles;
 	int nIndices;

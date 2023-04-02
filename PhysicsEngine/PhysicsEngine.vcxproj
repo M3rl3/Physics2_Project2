@@ -71,16 +71,24 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)include;$(ProjectDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <SourcePath>$(ProjectDir)src;$(SourcePath)</SourcePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(SolutionDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)include;$(ProjectDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <SourcePath>$(ProjectDir)src;$(SourcePath)</SourcePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)include/bullet;$(SolutionDir)include;$(ProjectDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <SourcePath>$(ProjectDir)src;$(SourcePath);</SourcePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)include/bullet;$(SolutionDir)include;$(ProjectDir)include;$(ProjectDir)interfaces;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <SourcePath>$(ProjectDir)src;$(SourcePath);</SourcePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -139,7 +147,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\CollisionHandler.h" />
     <ClInclude Include="include\PhysicsFactory.h" />
     <ClInclude Include="include\PhysicsWorld.h" />
     <ClInclude Include="include\RigidBody.h" />
@@ -160,11 +167,12 @@
     <ClInclude Include="interfaces\SphereShape.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="include\Conversion.cpp" />
+    <ClCompile Include="include\Conversion.h" />
     <ClCompile Include="interfaces\BoxShape.cpp" />
     <ClCompile Include="interfaces\CylinderShape.cpp" />
     <ClCompile Include="interfaces\PlaneShape.cpp" />
     <ClCompile Include="interfaces\SphereShape.cpp" />
-    <ClCompile Include="src\CollisionHandler.cpp" />
     <ClCompile Include="src\PhysicsFactory.cpp" />
     <ClCompile Include="src\PhysicsWorld.cpp" />
     <ClCompile Include="src\RigidBody.cpp" />

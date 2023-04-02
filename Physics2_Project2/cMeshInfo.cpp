@@ -19,6 +19,7 @@ cMeshInfo::cMeshInfo() {
 	this->isSkyBoxMesh = false;
 	this->hasChildMeshes = false;
 	this->isAnimated = false;
+	this->isControllable = false;
 	this->radius = 7.f;
 	this->moveSpeed = 10.f;
 	this->min = glm::vec3(FLT_MAX, FLT_MAX, FLT_MAX);

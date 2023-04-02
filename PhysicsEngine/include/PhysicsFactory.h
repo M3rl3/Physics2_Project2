@@ -1,6 +1,8 @@
 #pragma once
 
-#include "../interfaces/iPhysicsFactory.h"
+#include "iPhysicsFactory.h"
+
+#include <bullet/BulletDynamics/Dynamics/btDynamicsWorld.h>
 
 namespace physics {
 	class PhysicsFactory : public iPhysicsFactory
@@ -12,5 +14,8 @@ namespace physics {
 		virtual iPhysicsWorld* CreateWorld() override;
 		virtual iRigidBody* CreateRigidBody(const RigidBodyDesc& desc, iShape* shape) override;
 		virtual iSoftBody* CreateSoftBody(const SoftBodyDesc& desc) override;
+
+	private:
+		btDynamicsWorld* dynamicsWorld;
 	};
 }
