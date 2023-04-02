@@ -51,6 +51,7 @@ public:
 	bool hasChildMeshes;
 	bool isAnimated;
 	bool isControllable;
+	bool doOnce;
 
 	int nTriangles;
 	int nIndices;

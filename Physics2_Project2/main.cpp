@@ -64,6 +64,7 @@ cLight* pointLight;
 unsigned int readIndex = 0;
 int object_index = 0;
 int throwableIndex = 0;
+int throwaway = throwableIndex;
 int elapsed_frames = 0;
 
 bool enableMouse = false;
@@ -87,7 +88,7 @@ void RenderToFBO(GLFWwindow* window, sCamera* camera, glm::mat4& view, glm::mat4
     GLuint modelLocaction, GLuint modelInverseLocation);
 
 void CreateLightBulb();
-void CreateFlatPlane(glm::vec4 color);
+void CreateFlatPlane(float size, glm::vec4 color);
 void CreatePlayerBall(glm::vec3 position, float size);
 void CreateMoon();
 void CreateSkyBoxSphere();
@@ -104,6 +105,9 @@ void Reset();
 const glm::vec3 origin = glm::vec3(0);
 const glm::mat4 matIdentity = glm::mat4(1.0f);
 const glm::vec3 upVector = glm::vec3(0.f, 1.f, 0.f);
+glm::vec3 roundingError = glm::vec3(10.f, 0.f, 0.f);
+
+bool pressed = false;
 
 glm::vec3 direction(0.f);
 
@@ -125,7 +129,7 @@ sCamera* camera;
 
 glm::vec3 initCamera;
 
-eEditMode theEditMode = MOVING_CAMERA;
+eEditMode theEditMode = TAKE_CONTROL;
 
 float yaw = 0.f;
 float pitch = 0.f;
@@ -154,10 +158,6 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
-    if (key == GLFW_KEY_C && action == GLFW_PRESS)
-    {
-        theEditMode = MOVING_CAMERA;
-    }
     if (key == GLFW_KEY_O && action == GLFW_PRESS)
     {
         theEditMode = MOVING_SELECTED_OBJECT;
@@ -179,179 +179,83 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
             glm::vec3(RandomFloat(-100, 100), RandomFloat(20, 50), RandomFloat(-100, 100)),   // position
             glm::vec4(RandomFloat(0, 1), RandomFloat(0, 1), RandomFloat(0, 1), 1),            // color
             RandomFloat(1, 3));                                                               // size
+
+        pressed = true;
     }
+    if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE) {
+        pressed = false;
+    }
+
     if (key == GLFW_KEY_DELETE && action == GLFW_PRESS) {
         Reset();
     }
-    // Wireframe
-    if (key == GLFW_KEY_X && action == GLFW_PRESS) {
-        for (int i = 0; i < meshArray.size(); i++) {
-            meshArray[i]->isWireframe = true;
+    if (key == GLFW_KEY_EQUAL) {
+        if (throwableIndex != throwables.size() - 1) {
+            throwableIndex++;
         }
     }
-    if (key == GLFW_KEY_X && action == GLFW_RELEASE) {
-        for (int i = 0; i < meshArray.size(); i++) {
-            meshArray[i]->isWireframe = false;
+    if (key == GLFW_KEY_MINUS) {
+        if (throwableIndex != 0) {
+            throwableIndex--;
         }
     }
-    if (key == GLFW_KEY_LEFT_ALT && action == GLFW_PRESS) {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    }
-    if (key == GLFW_KEY_LEFT_ALT && action == GLFW_RELEASE) {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    }
+
     // Enable mouse look
     if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
         enableMouse = !enableMouse;
     }
 
-    switch (theEditMode)
+    // Camera input
+    if (key == GLFW_KEY_LEFT)     // Left
     {
-        case MOVING_CAMERA:
-        {
-            const float CAMERA_MOVE_SPEED = 10.f;
-            if (key == GLFW_KEY_A)     // Left
-            {
-                camera->StrafeLeft();
-            }
-            if (key == GLFW_KEY_D)     // Right
-            {
-                camera->StrafeRight();
-            }
-            if (key == GLFW_KEY_W)     // Forward
-            {
-                camera->MoveForward();
-            }
-            if (key == GLFW_KEY_S)     // Backwards
-            {
-                camera->MoveBackward();
-            }
-            if (key == GLFW_KEY_Q)     // Up
-            {
-                camera->MoveUp();
-            }
-            if (key == GLFW_KEY_E)     // Down
-            {
-                camera->MoveDown();
-            }
-        }
-        break;
-        case MOVING_SELECTED_OBJECT:
-        {
-            const float OBJECT_MOVE_SPEED = 1.f;
-            if (key == GLFW_KEY_A)     // Left
-            {
-                meshArray[object_index]->position.x -= OBJECT_MOVE_SPEED;
-            }
-            if (key == GLFW_KEY_D)     // Right
-            {
-                meshArray[object_index]->position.x += OBJECT_MOVE_SPEED;
-            }
-            if (key == GLFW_KEY_W)     // Forward
-            {
-                meshArray[object_index]->position.z += OBJECT_MOVE_SPEED;
-            }
-            if (key == GLFW_KEY_S)     // Backwards
-            {
-                meshArray[object_index]->position.z -= OBJECT_MOVE_SPEED;
-            }
-            if (key == GLFW_KEY_Q)     // Down
-            {
-                meshArray[object_index]->position.y -= OBJECT_MOVE_SPEED;
-            }
-            if (key == GLFW_KEY_E)     // Up
-            {
-                meshArray[object_index]->position.y += OBJECT_MOVE_SPEED;
-            }
+        camera->StrafeLeft();
+    }
+    if (key == GLFW_KEY_RIGHT)     // Right
+    {
+        camera->StrafeRight();
+    }
+    if (key == GLFW_KEY_UP)     // Forward
+    {
+        camera->MoveForward();
+    }
+    if (key == GLFW_KEY_DOWN)     // Backwards
+    {
+        camera->MoveBackward();
+    }
+    if (key == GLFW_KEY_PAGE_UP)     // Up
+    {
+        camera->MoveUp();
+    }
+    if (key == GLFW_KEY_PAGE_DOWN)     // Down
+    {
+        camera->MoveDown();
+    }
 
-            // cycle through objects in the scene
-            if (key == GLFW_KEY_1 && action == GLFW_PRESS)
-            {
-                object_index++;
-                if (object_index > meshArray.size() - 1) {
-                    object_index = 0;
-                }
-                if (!enableMouse) camera->target = meshArray[object_index]->position;
-            }
-            if (key == GLFW_KEY_2 && action == GLFW_PRESS)
-            {
-                object_index--;
-                if (object_index < 0) {
-                    object_index = meshArray.size() - 1;
-                }
-                if (!enableMouse) camera->target = meshArray[object_index]->position;
-            }    
-        }
-        break;
-        case MOVING_LIGHT:
-        {
-            if (key == GLFW_KEY_1 && action == GLFW_PRESS)
-            {
-                constLightAtten *= glm::vec4(1, 1.e+1, 1, 1);
-            }
-            if (key == GLFW_KEY_2 && action == GLFW_PRESS)
-            {
-                constLightAtten *= glm::vec4(1, 1.e-1, 1, 1);
-            }
-            if (key == GLFW_KEY_3 && action == GLFW_PRESS)
-            {
-                constLightAtten *= glm::vec4(1, 1, 1.e+1, 1);
-            }
-            if (key == GLFW_KEY_4 && action == GLFW_PRESS)
-            {
-                constLightAtten *= glm::vec4(1, 1, 1.e-1, 1);
-            }
+    constexpr float MOVE_SPEED = 1.f;
 
-            if (key == GLFW_KEY_W && action == GLFW_PRESS)
-            {
-                ambientLight *= 1.e+1;
-                LightMan->SetAmbientLightAmount(ambientLight);
-            }
-            if (key == GLFW_KEY_S && action == GLFW_PRESS)
-            {
-                ambientLight *= 1.e-1;
-                LightMan->SetAmbientLightAmount(ambientLight);
-            }
-        }
-        break;
-        case TAKE_CONTROL: 
-        {
-            constexpr float MOVE_SPEED = 1.f;
-
-            if (action == GLFW_PRESS) {
-                if (key == GLFW_KEY_W) {
-                    direction += MOVE_SPEED * camera->target;
-                    direction.y = 0;
-                }
-                if (key == GLFW_KEY_S) {
-                    direction += -MOVE_SPEED * camera->target;
-                    direction.y = 0;
-                }
-                if (key == GLFW_KEY_A) {
-                    glm::vec3 strafeDirection = glm::cross(camera->target, camera->up);
-                    direction += -MOVE_SPEED * strafeDirection;
-                }
-                if (key == GLFW_KEY_D) {
-                    glm::vec3 strafeDirection = glm::cross(camera->target, camera->up);
-                    direction += -MOVE_SPEED * strafeDirection;
-                }
-
-                if (key == GLFW_KEY_EQUAL) {
-                    if (throwableIndex != throwables.size()) {
-                        throwableIndex++;
-                    }
-                }
-                if (key == GLFW_KEY_MINUS) {
-                    if (throwableIndex != 0) {
-                        throwableIndex--;
-                    }
-                }
-            }
-            else if (action == GLFW_RELEASE) {
-                direction = glm::vec3(0.f);
-            }
-        }
-        break;
+    if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+        direction.z += MOVE_SPEED;
+    }
+    if (key == GLFW_KEY_W && action == GLFW_RELEASE) {
+        direction = glm::vec3(0.f);
+    }
+    if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+        direction.z -= MOVE_SPEED;
+    }
+    if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
+        direction = glm::vec3(0.f);
+    }
+    if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+        direction.x += MOVE_SPEED;
+    }
+    if (key == GLFW_KEY_A && action == GLFW_RELEASE) {
+        direction = glm::vec3(0.f);
+    }
+    if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+        direction.x -= MOVE_SPEED;
+    }
+    if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
+        direction = glm::vec3(0.f);
     }
 }
 
@@ -450,7 +354,7 @@ void Initialize() {
     glfwSetScrollCallback(window, ScrollCallBack);
 
     // capture mouse input
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     glfwSetErrorCallback(ErrorCallback);
 
@@ -465,8 +369,8 @@ void Initialize() {
     camera = new sCamera();
 
     // Init camera object
-    //camera->position = glm::vec3(-280.0, 140.0, -700.0);
-    camera->position = glm::vec3(0, 15, -50);
+    // camera->position = glm::vec3(0, 15, -50);
+    camera->position = glm::vec3(200, 75, -200);
     camera->target = glm::vec3(0.f, 0.f, 1.f);
 
     // Init imgui for crosshair
@@ -584,20 +488,20 @@ void Render() {
 
     glm::vec4 terrainColor = glm::vec4(0.25f, 0.25f, 0.25f, 1.f);
 
-    CreateFlatPlane(terrainColor);
+    CreateFlatPlane(1.f, terrainColor);
 
     CreateMoon();
 
-    CreatePlayerBall(glm::vec3(0, 2, 0), 1.f);
+    // CreatePlayerBall(glm::vec3(0, 2, 0), 1.f);
 
     CreateCylinders();
     
     // all textures loaded here
     LoadTextures();
 
-    temp = meshArray;
     // reads scene descripion files for positioning and other info
     // ReadSceneDescription(meshArray);
+
 }
 
 void Update() {
@@ -656,14 +560,14 @@ void Update() {
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
 
-    if (theEditMode == TAKE_CONTROL) {
-        camera->position = player_mesh->position - glm::vec3(0.f, -10.f, 50.f);
-        // bulb_mesh->position = player_mesh->position - glm::vec3(0.f, -100.f, 75.f);
+    //if (theEditMode == TAKE_CONTROL) {
+    //    camera->position = player_mesh->position - glm::vec3(0.f, -10.f, 50.f);
+    //    // bulb_mesh->position = player_mesh->position - glm::vec3(0.f, -100.f, 75.f);
 
-        if (!enableMouse) {
-            camera->target = player_mesh->position;
-        }
-    }
+    //    if (!enableMouse) {
+    //        camera->target = player_mesh->position;
+    //    }
+    //}
 
     for (int i = 0; i < meshArray.size(); i++) {
 
@@ -687,26 +591,62 @@ void Update() {
         for (int i = 0; i < throwables.size(); i++) {
 
             cMeshInfo* currentMesh = throwables[i];
+            cMeshInfo* controllableBall = throwables[throwableIndex];
+
+            if (currentMesh->doOnce) {
+                currentMesh->colour = currentMesh->RGBAColour;
+                currentMesh->doOnce = false;
+            }
+
+            // HACK
+            if (pressed) {
+                int currentBallIndex = throwables.size() - 1;
+                physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(throwables[currentBallIndex]->collisionBody);
+
+                int random = RandomFloat(0, 3);
+
+                if (random == 0) {
+                    roundingError = glm::vec3(10, 0, 0);
+                }
+                if (random == 1) {
+                    roundingError = glm::vec3(-10, 0, 0);
+                }
+                if (random == 2) {
+                    roundingError = glm::vec3(0, 0, 10);
+                }
+                if (random == 3) {
+                    roundingError = glm::vec3(0, 0, -10);
+                }
+
+                rigidBody->ApplyForce(roundingError);
+            }
 
             // convert player colliding body to rigid body
-            physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(player_mesh->collisionBody);
+            physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(throwables[throwableIndex]->collisionBody);
 
             // check if they need physics applied to them
             if (rigidBody != nullptr) {
 
-                float force = 100.f;
+                float force = 10.f;
                 float damping = 1.0f;
 
-                // direction coming in from user inputs
-                rigidBody->ApplyTorque((direction * force) * damping);
-                rigidBody->ApplyForce((direction * force) * damping);
-                rigidBody->ApplyForceAtPoint(direction * force, glm::vec3(0.f, 5.f, 0.f));
+                rigidBody->ApplyForce(direction * force);
+                rigidBody->ApplyTorque(direction * force);
+               
+                controllableBall->RGBAColour = glm::vec4(10, 10, 0, 1);
+            }
 
-                //rigidBody->ApplyImpulse((direction * force) * damping);
-                //rigidBody->ApplyImpulseAtPoint(direction * force, glm::vec3(0.f, 5.f, 0.f));
+            if (throwableIndex != throwaway) {
 
-                rigidBody->GetPosition(player_mesh->position);
-                rigidBody->GetRotation(player_mesh->rotation);
+                if ((throwableIndex - 1) >= 0) {
+                    throwables[throwableIndex - 1]->RGBAColour = throwables[throwableIndex - 1]->colour;
+                }
+
+                if ((throwableIndex + 1) <= (throwables.size() - 1)) {
+                    throwables[throwableIndex + 1]->RGBAColour = throwables[throwableIndex + 1]->colour;
+                }
+
+                throwaway = throwableIndex;
             }
 
             if (currentMesh->scale.x > 2) {
@@ -1133,11 +1073,9 @@ void LoadPlyFilesIntoVAO(void)
     }
 }
 
-void CreateFlatPlane(glm::vec4 color) {
+void CreateFlatPlane(float size, glm::vec4 color) {
 
     cMeshInfo* plain_mesh = new cMeshInfo();
-
-    float size = 1.f;
 
     plain_mesh->meshName = "flat_plain";
     plain_mesh->friendlyName = "flat_plain";
