@@ -1,4 +1,4 @@
-#include "OpenGL.h"
+﻿#include "OpenGL.h"
 #include "cMeshInfo.h"
 #include "sCamera.h"
 #include "DrawMesh.h"
@@ -64,7 +64,7 @@ cLight* pointLight;
 unsigned int readIndex = 0;
 int object_index = 0;
 int throwableIndex = 0;
-int throwaway = throwableIndex;
+int copyIndex = throwableIndex;
 int elapsed_frames = 0;
 
 bool enableMouse = true;
@@ -165,9 +165,6 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
 
-    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-        HardReset();
-    }
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
         CreateBall("ball", 
@@ -184,6 +181,9 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
     if (key == GLFW_KEY_DELETE && action == GLFW_PRESS) {
         Reset();
     }
+    if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+        HardReset();
+    }
     if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS) {
         if (throwableIndex != throwables.size() - 1) {
             throwableIndex++;
@@ -195,7 +195,7 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
         }
     }
 
-    // Enable mouse look
+    // enable/disable mouse look
     if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
         enableMouse = !enableMouse;
     }
@@ -226,8 +226,10 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
         camera->MoveDown();
     }
 
-    constexpr float MOVE_SPEED = 1.f;
-
+    // user input to determine the direction of the force applied
+    // Forward = Where the camera is facing
+    // Back = -Forward
+    // Left/Right = Cross product of forward and up
     if (key == GLFW_KEY_W && action == GLFW_PRESS) {
         direction = -camera->forward;
     }
@@ -307,8 +309,6 @@ static void ScrollCallBack(GLFWwindow* window, double xoffset, double yoffset) {
 
 void Initialize() {
 
-    std::cout.flush();
-
     if (!glfwInit()) {
         std::cerr << "GLFW init failed." << std::endl;
         glfwTerminate();
@@ -363,15 +363,12 @@ void Initialize() {
     }
     glfwSwapInterval(1); //vsync
 
+    // Init camera object
     camera = new sCamera();
 
-    // Init camera object
-    // camera->position = glm::vec3(0, 15, -50);
+    // Init camera values
     camera->position = glm::vec3(160, 60, -160);
-    camera->target = glm::vec3(0.f, 0.f, 1.f);
-
-    // Init imgui for crosshair
-    // crosshair.Initialize(window, glsl_version);
+    camera->target = glm::vec3(-160.f, 0.f, 160.f);
 }
 
 void Render() {
@@ -385,19 +382,19 @@ void Render() {
 
     // Set Gravity
     physicsWorld->SetGravity(glm::vec3(0.f, -9.8f, 0.f));
-    // physicsWorld->SetGravity(glm::vec3(0.f, 0.f, 0.f));
 
     // FBO
     std::cout << "\nCreating FBO..." << std::endl;
     FrameBuffer = new cFBO();
-
     useFBO = true;
 
     int screenWidth = 0;
     int screenHeight = 0;
 
+    // Get window size
     glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
 
+    // Create the frame buffer based on window size
     std::string fboErrorString = "";
     if (!FrameBuffer->init(screenWidth, screenHeight, fboErrorString)) {
         std::cout << "FBO creation error: " << fboErrorString << std::endl;
@@ -454,6 +451,7 @@ void Render() {
     ambientLight = 0.5f;
     LightMan->SetAmbientLightAmount(ambientLight);
 
+    // Attenuation on all lights in the scene
     constLightAtten = glm::vec4(0.1f, 2.5e-5f, 2.5e-5f, 1.0f);
 
     // The actual light
@@ -485,20 +483,17 @@ void Render() {
 
     glm::vec4 terrainColor = glm::vec4(0.25f, 0.25f, 0.25f, 1.f);
 
-    CreateFlatPlane(1.f, terrainColor);
-
+    // Scene
     CreateMoon();
 
-    // CreatePlayerBall(glm::vec3(0, 2, 0), 1.f);
+    // The floor
+    CreateFlatPlane(1.f, terrainColor);
 
+    // Bowling pin cylinders
     CreateCylinders();
     
     // all textures loaded here
     LoadTextures();
-
-    // reads scene descripion files for positioning and other info
-    // ReadSceneDescription(meshArray);
-
 }
 
 void Update() {
@@ -549,6 +544,7 @@ void Update() {
         camera->projection = glm::perspective(0.6f, ratio, 0.1f, 10000.f);
     }
 
+    // Calculate the forward direction to determine direction of the force
     // The forward direction is stored in the third column of the matrix
     camera->forward = glm::normalize(glm::vec3(camera->view[0][2], 
                                                camera->view[1][2],
@@ -562,6 +558,7 @@ void Update() {
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera->view));
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera->projection));
 
+    // non-physics objects
     for (int i = 0; i < meshArray.size(); i++) {
 
         cMeshInfo* currentMesh = meshArray[i];
@@ -580,22 +577,33 @@ void Update() {
         physicsWorld->TimeStep(0.06f);
     }
 
+    // Check if there are any spheres to be drawn at all
     if (throwables.size() != 0) {
         for (int i = 0; i < throwables.size(); i++) {
 
+            // All the spheres that were instantiated
             cMeshInfo* currentMesh = throwables[i];
+
+            // The sphere currently under the user's control
             cMeshInfo* controllableBall = throwables[throwableIndex];
 
+            // HACK
+            // Make a copy of the previous color
+            // So we can change back to the original color
             if (currentMesh->doOnce) {
                 currentMesh->colour = currentMesh->RGBAColour;
                 currentMesh->doOnce = false;
             }
 
             // HACK
+            // Have a force applied to the sphere that was last created
+            // Otherwise the sphere does not react to any forces applied henceforth
+            // For some reason ¯\_(ツ)_/¯
             if (pressed) {
                 int currentBallIndex = throwables.size() - 1;
                 physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(throwables[currentBallIndex]->collisionBody);
 
+                // Have it go in a random direction
                 int random = RandomFloat(0, 3);
 
                 if (random == 0) {
@@ -611,28 +619,35 @@ void Update() {
                     roundingError = glm::vec3(0, 0, -10);
                 }
 
+                // Sort of a rounding error
                 rigidBody->ApplyForce(roundingError);
             }
 
-            // convert player colliding body to rigid body
+            // Convert the sphere's colliding body to a rigid body
             physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(throwables[throwableIndex]->collisionBody);
 
-            // check if they need physics applied to them
+            // Check if the rigid body actually exists
             if (rigidBody != nullptr) {
 
+                // Multilpier
                 float speed = 25.f;
 
+                // Don't need any forces applied upwards/downwards
                 direction.y = 0;
 
-                // rigidBody->SetLinearVelocity(direction * speed);
+                // Set the forces from user inputs
                 rigidBody->ApplyForce(direction * speed);
                 rigidBody->ApplyTorque(direction * speed);
-               
+                
+                // Set the color of the specific sphere instance to bright yellow
+                // To indicate that its under the user's control
                 controllableBall->RGBAColour = glm::vec4(10, 10, 0, 1);
             }
 
-            if (throwableIndex != throwaway) {
+            // Check if the sphere the user was controlling has changed or no
+            if (throwableIndex != copyIndex) {
 
+                // Give the original color back to it
                 if ((throwableIndex - 1) >= 0) {
                     throwables[throwableIndex - 1]->RGBAColour = throwables[throwableIndex - 1]->colour;
                 }
@@ -641,10 +656,14 @@ void Update() {
                     throwables[throwableIndex + 1]->RGBAColour = throwables[throwableIndex + 1]->colour;
                 }
 
-                throwaway = throwableIndex;
+                // update the copy
+                copyIndex = throwableIndex;
             }
 
             // HACK
+            // If the sphere is scaled by 2 or more units
+            // Move the model matrix silghtly up to prevent
+            // the model from clipping under the floor
             if (currentMesh->scale.x > 2) {
                 model += glm::translate(glm::mat4x4(1.f), glm::vec3(0.f, 1.5f, 0.f));
             }
@@ -664,6 +683,7 @@ void Update() {
         }
     }
 
+    // Draw the cylinders
     if (cylinders.size() != 0) {
         for (int i = 0; i < cylinders.size(); i++) {
 
@@ -700,6 +720,7 @@ void Update() {
     timeDiff = currentTime - beginTime;
     frameCount++;
 
+    // Set the window title to display relevent information
     if (timeDiff >= 1.f / 30.f) {
         std::string frameRate = std::to_string((1.f / timeDiff) * frameCount);
         std::string frameTime = std::to_string((timeDiff / frameCount) * 1000);
@@ -717,6 +738,7 @@ void Update() {
     }
 }
 
+// Gracefully close everything down
 void Shutdown() {
 
     glfwDestroyWindow(window);
@@ -798,51 +820,8 @@ void LoadTextures() {
     {
         std::cout << "Error: failed to load moon texture.";
     }
-    if (TextureMan->Create2DTextureFromBMPFile("Beholder_Base_color.bmp"))
-    {
-        std::cout << "Loaded beholder texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load beholder texture.";
-    }
 
-    if (TextureMan->Create2DTextureFromBMPFile("man.bmp"))
-    {
-        std::cout << "Loaded man texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load man texture.";
-    }
-
-    if (TextureMan->Create2DTextureFromBMPFile("TropicalSunnyDayDown2048.bmp"))
-    {
-        std::cout << "Loaded mememan texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load computer texture.";
-    }
-
-    if (TextureMan->Create2DTextureFromBMPFile("ai-notes.bmp"))
-    {
-        std::cout << "Loaded computer texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load ai-notes texture.";
-    }
-
-    if (TextureMan->Create2DTextureFromBMPFile("crosshair_inverted.bmp"))
-    {
-        std::cout << "Loaded crosshair_inverted texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load crosshair texture.";
-    }
-
+    // Crosshair texture
     if (TextureMan->Create2DTextureFromBMPFile("crosshair.bmp"))
     {
         std::cout << "Loaded crosshair texture." << std::endl;
@@ -850,33 +829,6 @@ void LoadTextures() {
     else
     {
         std::cout << "Error: failed to load crosshair texture.";
-    }
-    
-    if (TextureMan->Create2DTextureFromBMPFile("europa_texture.bmp"))
-    {
-        std::cout << "Loaded europa texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load europa texture.";
-    }
-    
-    if (TextureMan->Create2DTextureFromBMPFile("jupiter_texture.bmp"))
-    {
-        std::cout << "Loaded jupiter texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load jupiter texture.";
-    }
-    
-    if (TextureMan->Create2DTextureFromBMPFile("basketball_sph.bmp"))
-    {
-        std::cout << "Loaded basketball texture." << std::endl;
-    }
-    else
-    {
-        std::cout << "Error: failed to load basketball texture.";
     }
 }
 
@@ -887,6 +839,7 @@ float RandomFloat(float a, float b) {
     return a + r;
 }
 
+// Render to a Frame Buffer Object
 void RenderToFBO(GLFWwindow* window, sCamera* camera,
                  GLuint eyeLocationLocation, GLuint viewLocation, GLuint projectionLocation,
                  GLuint modelLocaction, GLuint modelInverseLocation)
@@ -978,17 +931,12 @@ bool RandomizePositions(cMeshInfo* mesh) {
     return true;
 }
 
+// Models loaded here
 void LoadPlyFilesIntoVAO(void)
 {
     sModelDrawInfo bulb;
     plyLoader->LoadModel(meshFiles[0], bulb);
     if (!VAOMan->LoadModelIntoVAO("bulb", bulb, shaderID)) {
-        std::cerr << "Could not load model into VAO" << std::endl;
-    }
-
-    sModelDrawInfo terrain_obj;
-    plyLoader->LoadModel(meshFiles[4], terrain_obj);
-    if (!VAOMan->LoadModelIntoVAO("terrain", terrain_obj, shaderID)) {
         std::cerr << "Could not load model into VAO" << std::endl;
     }
 
@@ -1021,12 +969,6 @@ void LoadPlyFilesIntoVAO(void)
         std::cerr << "Could not load model into VAO" << std::endl;
     }
 
-    sModelDrawInfo beholder;
-    plyLoader->LoadModel(meshFiles[3], beholder);
-    if (!VAOMan->LoadModelIntoVAO("beholder", beholder, shaderID)) {
-        std::cerr << "Could not load model into VAO" << std::endl;
-    }
-    
     // 2-sided full screen quad aligned to x-y axis
     sModelDrawInfo fullScreenQuad;
     plyLoader->LoadModel(meshFiles[10], fullScreenQuad);
@@ -1042,6 +984,7 @@ void LoadPlyFilesIntoVAO(void)
     }
 }
 
+// The floor of the scene
 void CreateFlatPlane(float size, glm::vec4 color) {
 
     cMeshInfo* plain_mesh = new cMeshInfo();
@@ -1072,6 +1015,7 @@ void CreateFlatPlane(float size, glm::vec4 color) {
     meshArray.push_back(plain_mesh);
 }
 
+// Create a player object
 void CreatePlayerBall(glm::vec3 position, float size) {
 
     player_mesh = new cMeshInfo();
@@ -1102,6 +1046,7 @@ void CreatePlayerBall(glm::vec3 position, float size) {
     meshArray.push_back(player_mesh);
 }
 
+// Instantiate the spheres on user input
 void CreateBall(std::string modelName, glm::vec3 position, glm::vec4 color, float mass) {
 
     cMeshInfo* ball = new cMeshInfo();
@@ -1126,6 +1071,7 @@ void CreateBall(std::string modelName, glm::vec3 position, glm::vec4 color, floa
     throwables.push_back(ball);
 }
 
+// Individual cylinder parameters
 void CreateCylinder(std::string modelName, glm::vec3 position, glm::vec4 color, float mass) {
 
     cMeshInfo* cylinder = new cMeshInfo();
@@ -1150,6 +1096,7 @@ void CreateCylinder(std::string modelName, glm::vec3 position, glm::vec4 color, 
     cylinders.push_back(cylinder);
 }
 
+// All the cylinders are loaded here
 void CreateCylinders() {
 
     float cylinderSize = 1.f;
@@ -1220,12 +1167,6 @@ void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, g
 
 void CreateMoon() {
 
-    /*sModelDrawInfo moon_obj;
-    plyLoader->LoadModel(meshFiles[5], moon_obj);
-    if (!VAOMan->LoadModelIntoVAO("moon", moon_obj, shaderID)) {
-        std::cerr << "Could not load model into VAO" << std::endl;
-    }*/
-
     cMeshInfo* moon_mesh = new cMeshInfo();
     moon_mesh->meshName = "moon";
     moon_mesh->friendlyName = "moon";
@@ -1244,12 +1185,6 @@ void CreateMoon() {
 
 void CreateLightBulb() {
 
-    /*sModelDrawInfo bulb;
-    plyLoader->LoadModel(meshFiles[0], bulb);
-    if (!VAOMan->LoadModelIntoVAO("bulb", bulb, shaderID)) {
-        std::cerr << "Could not load model into VAO" << std::endl;
-    }*/
-
     bulb_mesh = new cMeshInfo();
     bulb_mesh->meshName = "bulb";
     bulb_mesh->friendlyName = "bulb";
@@ -1261,12 +1196,6 @@ void CreateLightBulb() {
 
 void CreateSkyBoxSphere() {
 
-    //// skybox sphere with inverted normals
-    //sModelDrawInfo skybox_sphere_obj;
-    //plyLoader->LoadModel(meshFiles[6], skybox_sphere_obj);
-    //if (!VAOMan->LoadModelIntoVAO("skybox_sphere", skybox_sphere_obj, shaderID)) {
-    //    std::cerr << "Could not load model into VAO" << std::endl;
-    //}
     skybox_sphere_mesh = new cMeshInfo();
     skybox_sphere_mesh->meshName = "skybox_sphere";
     skybox_sphere_mesh->friendlyName = "skybox_sphere";
@@ -1275,6 +1204,7 @@ void CreateSkyBoxSphere() {
 }
 
 void HardReset() {
+
     if (cylinders.size() != 0) {
         for (int i = 0; i < meshArray.size(); i++) {
             delete cylinders[i];
@@ -1292,6 +1222,7 @@ void HardReset() {
 }
 
 void Reset() {
+
     if (throwables.size() != 0) {
         for (int i = 0; i < throwables.size(); i++) {
             delete throwables[i];
