@@ -98,6 +98,8 @@ void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, g
 void CreateCube(std::string modelName, glm::vec3 position, glm::vec4 color, float mass);
 void CreateCylinder(std::string modelName, glm::vec3 position, glm::vec4 color, float mass);
 void CreateCylinders();
+void CreateStaticBoxes();
+void CreateWalls();
 
 void HardReset();
 void Reset();
@@ -499,6 +501,12 @@ void Render() {
 
     // Bowling pin cylinders
     CreateCylinders();
+
+    // Stacked boxes
+    CreateStaticBoxes();
+
+    // Arena walls
+    CreateWalls();
     
     // all textures loaded here
     LoadTextures();
@@ -1121,6 +1129,34 @@ void CreateCylinders() {
     CreateCylinder("cylinder9", glm::vec3(17.5, 2, 15), glm::vec4(1), cylinderSize);
 }
 
+void CreateStaticBoxes() {
+    float cubeSize = 2.f;
+
+    CreateCube("cube0", glm::vec3(50, 2, 0), glm::vec4(1), cubeSize);
+    CreateCube("cube1", glm::vec3(50, 8, 0), glm::vec4(1), cubeSize);
+    CreateCube("cube2", glm::vec3(50, 13, 0), glm::vec4(1), cubeSize);
+
+    CreateCube("cube3", glm::vec3(-50, 2, 0), glm::vec4(1), cubeSize);
+    CreateCube("cube4", glm::vec3(-50, 8, 0), glm::vec4(1), cubeSize);
+    CreateCube("cube5", glm::vec3(-50, 13, 0), glm::vec4(1), cubeSize);
+    
+    CreateCube("cube6", glm::vec3(50, 2, -50), glm::vec4(1), cubeSize);
+    CreateCube("cube7", glm::vec3(50, 8, -50), glm::vec4(1), cubeSize);
+    CreateCube("cube8", glm::vec3(50, 13, -50), glm::vec4(1), cubeSize);
+    
+    CreateCube("cube9", glm::vec3(-50, 2, 50), glm::vec4(1), cubeSize);
+    CreateCube("cube10", glm::vec3(-50, 8, 50), glm::vec4(1), cubeSize);
+    CreateCube("cube11", glm::vec3(-50, 13, 50), glm::vec4(1), cubeSize);
+}
+
+void CreateWalls() {
+    // arena walls created here
+    CreateWall("wall0", glm::vec3(0, 6, 100), glm::vec3(67.55f, 0.f, 0.f), glm::vec3(0, 0, 0), glm::vec3(1, 1, 0.06), glm::vec4(0.25f, 0.25f, 0.25f, 1.f), 1.f);
+    CreateWall("wall1", glm::vec3(0, 6, -100), glm::vec3(-67.55f, 0.f, 0.f), glm::vec3(0, 0, 0), glm::vec3(1, 1, 0.06), glm::vec4(0.25f, 0.25f, 0.25f, 1.f), 1.f);
+    CreateWall("wall2", glm::vec3(100, 6, 0), glm::vec3(0.f, 0.f, -67.55f), glm::vec3(0, 0, 0), glm::vec3(0.06, 1, 1), glm::vec4(0.25f, 0.25f, 0.25f, 1.f), 1.f);
+    CreateWall("wall3", glm::vec3(-100, 6, 0), glm::vec3(0.f, 0.f, 67.55f), glm::vec3(0, 0, 0), glm::vec3(0.06, 1, 1), glm::vec4(0.25f, 0.25f, 0.25f, 1.f), 1.f);
+}
+
 void CreateCube(std::string modelName, glm::vec3 position, glm::vec4 color, float mass) {
 
     cube = new cMeshInfo();
@@ -1135,14 +1171,14 @@ void CreateCube(std::string modelName, glm::vec3 position, glm::vec4 color, floa
     physics::iShape* cubeShape = new physics::BoxShape(glm::vec3(1.f));
     physics::RigidBodyDesc description;
     description.isStatic = false;
-    description.mass = mass;
+    description.mass = mass * 0.5f;
     description.position = position;
     description.linearVelocity = glm::vec3(0.f);
 
     cube->collisionBody = physicsFactory->CreateRigidBody(description, cubeShape);
     physicsWorld->AddBody(cube->collisionBody);
 
-    meshArray.push_back(cube);
+    cylinders.push_back(cube);
 }
 
 void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, glm::vec3 normal, glm::vec3 size, glm::vec4 color, float mass) {
@@ -1161,7 +1197,7 @@ void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, g
     physics::iShape* planeShape = new physics::PlaneShape(0.0f, normal);
     physics::RigidBodyDesc description;
     description.isStatic = true;
-    description.mass = mass;
+    description.mass = 0;
     description.position = position;
     description.rotation = wall->rotation;
     description.linearVelocity = glm::vec3(0.f);
