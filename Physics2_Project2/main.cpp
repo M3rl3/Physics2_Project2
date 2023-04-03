@@ -165,6 +165,7 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
 
+    // Create new spheres
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
         CreateBall("ball", 
@@ -178,20 +179,27 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
         pressed = false;
     }
 
+    // Reset the scene
     if (key == GLFW_KEY_DELETE && action == GLFW_PRESS) {
         Reset();
     }
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
         HardReset();
     }
+
+    // Change the sphere under the user's control
     if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS) {
-        if (throwableIndex != throwables.size() - 1) {
-            throwableIndex++;
+        if (throwables.size() > 0) {
+            if (throwableIndex != throwables.size() - 1) {
+                throwableIndex++;
+            }
         }
     }
     if (key == GLFW_KEY_MINUS && action == GLFW_PRESS) {
-        if (throwableIndex != 0) {
-            throwableIndex--;
+        if (throwables.size() > 0) {
+            if (throwableIndex != 0) {
+                throwableIndex--;
+            }
         }
     }
 
