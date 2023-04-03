@@ -1194,7 +1194,7 @@ void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, g
     wall->useRGBAColour = true;
     wall->doNotLight = false;
 
-    physics::iShape* planeShape = new physics::PlaneShape(0.0f, normal);
+    /*physics::iShape* planeShape = new physics::PlaneShape(0.0f, normal);
     physics::RigidBodyDesc description;
     description.isStatic = true;
     description.mass = 0;
@@ -1203,7 +1203,7 @@ void CreateWall(std::string modelName, glm::vec3 position, glm::vec3 rotation, g
     description.linearVelocity = glm::vec3(0.f);
 
     wall->collisionBody = physicsFactory->CreateRigidBody(description, planeShape);
-    physicsWorld->AddBody(wall->collisionBody);
+    physicsWorld->AddBody(wall->collisionBody);*/
 
     meshArray.push_back(wall);
 }
