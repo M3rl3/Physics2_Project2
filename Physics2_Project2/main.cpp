@@ -1250,7 +1250,7 @@ void CreateSkyBoxSphere() {
 void HardReset() {
 
     if (cylinders.size() != 0) {
-        for (int i = 0; i < meshArray.size(); i++) {
+        for (int i = 0; i < cylinders.size(); i++) {
             delete cylinders[i];
         }
         cylinders.clear();
