@@ -116,6 +116,8 @@ glm::vec3 direction = glm::vec3(0.f);
 // attenuation on all lights
 glm::vec4 constLightAtten = glm::vec4(1.0f);
 
+double g_prevTime, g_currentTime, g_elapsedTime;
+
 enum eEditMode
 {
     MOVING_CAMERA,
@@ -561,7 +563,7 @@ void Update() {
     }
 
     // Calculate the forward direction to determine direction of the force
-    // The forward direction is stored in the third column of the matrix
+    // The forward direction is stored in the third column of the view matrix
     camera->forward = glm::normalize(glm::vec3(camera->view[0][2], 
                                                camera->view[1][2],
                                                camera->view[2][2]));
@@ -573,6 +575,10 @@ void Update() {
 
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera->view));
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera->projection));
+
+    g_prevTime = g_currentTime;
+    g_currentTime = glfwGetTime();
+    g_elapsedTime = g_currentTime - g_prevTime;
 
     // non-physics objects
     for (int i = 0; i < meshArray.size(); i++) {
@@ -587,10 +593,7 @@ void Update() {
             VAOMan,                // Instance of the VAO Manager
             camera,                // Instance of the struct Camera
             modelLocaction,        // UL for model matrix
-            modelInverseLocation); // UL for transpose of model matrix
-
-        // Physics update step
-        physicsWorld->TimeStep(0.06f);
+            modelInverseLocation); // UL for transpose of model matrix       
     }
 
     // Check if there are any spheres to be drawn at all
@@ -615,29 +618,29 @@ void Update() {
             // Have a force applied to the sphere that was last created
             // Otherwise the sphere does not react to any forces applied henceforth
             // For some reason ¯\_(ツ)_/¯
-            if (pressed) {
-                int currentBallIndex = throwables.size() - 1;
-                physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(throwables[currentBallIndex]->collisionBody);
+            //if (pressed) {
+            //    int currentBallIndex = throwables.size() - 1;
+            //    physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(throwables[currentBallIndex]->collisionBody);
 
-                // Have it go in a random direction
-                int random = RandomFloat(0, 3);
+            //    // Have it go in a random direction
+            //    int random = RandomFloat(0, 3);
 
-                if (random == 0) {
-                    roundingError = glm::vec3(10, 0, 0);
-                }
-                if (random == 1) {
-                    roundingError = glm::vec3(-10, 0, 0);
-                }
-                if (random == 2) {
-                    roundingError = glm::vec3(0, 0, 10);
-                }
-                if (random == 3) {
-                    roundingError = glm::vec3(0, 0, -10);
-                }
+            //    if (random == 0) {
+            //        roundingError = glm::vec3(10, 0, 0);
+            //    }
+            //    if (random == 1) {
+            //        roundingError = glm::vec3(-10, 0, 0);
+            //    }
+            //    if (random == 2) {
+            //        roundingError = glm::vec3(0, 0, 10);
+            //    }
+            //    if (random == 3) {
+            //        roundingError = glm::vec3(0, 0, -10);
+            //    }
 
-                // Sort of a rounding error
-                rigidBody->ApplyForce(roundingError);
-            }
+            //    // Sort of a rounding error
+            //    rigidBody->ApplyForce(roundingError);
+            //}
 
             // Convert the sphere's colliding body to a rigid body
             physics::iRigidBody* rigidBody = dynamic_cast<physics::iRigidBody*>(throwables[throwableIndex]->collisionBody);
@@ -646,7 +649,7 @@ void Update() {
             if (rigidBody != nullptr) {
 
                 // Multilpier
-                float speed = 25.f;
+                float speed = 50.f;
 
                 // Don't need any forces applied upwards/downwards
                 direction.y = 0;
@@ -716,6 +719,9 @@ void Update() {
                 modelInverseLocation); // UL for transpose of model matrix
         }
     }
+
+    // Physics update step
+    physicsWorld->TimeStep(g_currentTime);
 
     // Draw the skybox
     DrawMesh(skybox_sphere_mesh, matIdentity, shaderID, 
