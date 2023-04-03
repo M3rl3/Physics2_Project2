@@ -67,7 +67,7 @@ int throwableIndex = 0;
 int throwaway = throwableIndex;
 int elapsed_frames = 0;
 
-bool enableMouse = false;
+bool enableMouse = true;
 bool useFBO = false;
 bool mouseClick = false;
 
@@ -83,7 +83,7 @@ void ManageLights();
 float RandomFloat(float a, float b);
 bool RandomizePositions(cMeshInfo* mesh);
 void LoadPlyFilesIntoVAO(void);
-void RenderToFBO(GLFWwindow* window, sCamera* camera, glm::mat4& view, glm::mat4& projection,
+void RenderToFBO(GLFWwindow* window, sCamera* camera,
     GLuint eyeLocationLocation, GLuint viewLocation, GLuint projectionLocation,
     GLuint modelLocaction, GLuint modelInverseLocation);
 
@@ -109,7 +109,7 @@ glm::vec3 roundingError = glm::vec3(10.f, 0.f, 0.f);
 
 bool pressed = false;
 
-glm::vec3 direction(0.f);
+glm::vec3 direction = glm::vec3(0.f);
 
 // attenuation on all lights
 glm::vec4 constLightAtten = glm::vec4(1.0f);
@@ -158,18 +158,13 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
-    if (key == GLFW_KEY_O && action == GLFW_PRESS)
-    {
-        theEditMode = MOVING_SELECTED_OBJECT;
+    if (key == GLFW_KEY_LEFT_ALT && action == GLFW_PRESS) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
-    if (key == GLFW_KEY_F && action == GLFW_PRESS)
-    {
-        theEditMode = TAKE_CONTROL;
+    if (key == GLFW_KEY_LEFT_ALT && action == GLFW_RELEASE) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
-    if (key == GLFW_KEY_L && action == GLFW_PRESS) 
-    {
-        theEditMode = MOVING_LIGHT;
-    }
+
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
         HardReset();
     }
@@ -189,12 +184,12 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
     if (key == GLFW_KEY_DELETE && action == GLFW_PRESS) {
         Reset();
     }
-    if (key == GLFW_KEY_EQUAL) {
+    if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS) {
         if (throwableIndex != throwables.size() - 1) {
             throwableIndex++;
         }
     }
-    if (key == GLFW_KEY_MINUS) {
+    if (key == GLFW_KEY_MINUS && action == GLFW_PRESS) {
         if (throwableIndex != 0) {
             throwableIndex--;
         }
@@ -234,25 +229,27 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
     constexpr float MOVE_SPEED = 1.f;
 
     if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-        direction.z += MOVE_SPEED;
+        direction = -camera->forward;
     }
     if (key == GLFW_KEY_W && action == GLFW_RELEASE) {
         direction = glm::vec3(0.f);
     }
     if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-        direction.z -= MOVE_SPEED;
+        direction = camera->forward;
     }
     if (key == GLFW_KEY_S && action == GLFW_RELEASE) {
         direction = glm::vec3(0.f);
     }
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-        direction.x += MOVE_SPEED;
+        glm::vec3 crossProduct = glm::cross(camera->forward, camera->up);
+        direction = crossProduct;
     }
     if (key == GLFW_KEY_A && action == GLFW_RELEASE) {
         direction = glm::vec3(0.f);
     }
     if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-        direction.x -= MOVE_SPEED;
+        glm::vec3 crossProduct = glm::cross(camera->forward, camera->up);
+        direction = -crossProduct;
     }
     if (key == GLFW_KEY_D && action == GLFW_RELEASE) {
         direction = glm::vec3(0.f);
@@ -354,7 +351,7 @@ void Initialize() {
     glfwSetScrollCallback(window, ScrollCallBack);
 
     // capture mouse input
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     glfwSetErrorCallback(ErrorCallback);
 
@@ -370,7 +367,7 @@ void Initialize() {
 
     // Init camera object
     // camera->position = glm::vec3(0, 15, -50);
-    camera->position = glm::vec3(200, 75, -200);
+    camera->position = glm::vec3(160, 60, -160);
     camera->target = glm::vec3(0.f, 0.f, 1.f);
 
     // Init imgui for crosshair
@@ -515,7 +512,7 @@ void Update() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // MVP
-    glm::mat4x4 model, view, projection;
+    glm::mat4x4 model;
 
     GLint modelLocaction = glGetUniformLocation(shaderID, "Model");
     GLint viewLocation = glGetUniformLocation(shaderID, "View");
@@ -544,30 +541,26 @@ void Update() {
 
     // mouse support
     if (enableMouse) {
-        view = glm::lookAt(camera->position, camera->position + camera->target, upVector);
-        projection = glm::perspective(glm::radians(fov), ratio, 0.1f, 10000.f);
+        camera->view = glm::lookAt(camera->position, camera->position + camera->target, upVector);
+        camera->projection = glm::perspective(glm::radians(fov), ratio, 0.1f, 10000.f);
     }
     else {
-        view = glm::lookAt(camera->position, camera->target, upVector);
-        projection = glm::perspective(0.6f, ratio, 0.1f, 10000.f);
+        camera->view = glm::lookAt(camera->position, camera->target, upVector);
+        camera->projection = glm::perspective(0.6f, ratio, 0.1f, 10000.f);
     }
+
+    // The forward direction is stored in the third column of the matrix
+    camera->forward = glm::normalize(glm::vec3(camera->view[0][2], 
+                                               camera->view[1][2],
+                                               camera->view[2][2]));
 
     GLint eyeLocationLocation = glGetUniformLocation(shaderID, "eyeLocation");
     glUniform4f(eyeLocationLocation, camera->position.x, camera->position.y, camera->position.z, 1.f);
 
     model = glm::mat4(1.f);
 
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
-
-    //if (theEditMode == TAKE_CONTROL) {
-    //    camera->position = player_mesh->position - glm::vec3(0.f, -10.f, 50.f);
-    //    // bulb_mesh->position = player_mesh->position - glm::vec3(0.f, -100.f, 75.f);
-
-    //    if (!enableMouse) {
-    //        camera->target = player_mesh->position;
-    //    }
-    //}
+    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera->view));
+    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera->projection));
 
     for (int i = 0; i < meshArray.size(); i++) {
 
@@ -627,11 +620,13 @@ void Update() {
             // check if they need physics applied to them
             if (rigidBody != nullptr) {
 
-                float force = 10.f;
-                float damping = 1.0f;
+                float speed = 25.f;
 
-                rigidBody->ApplyForce(direction * force);
-                rigidBody->ApplyTorque(direction * force);
+                direction.y = 0;
+
+                // rigidBody->SetLinearVelocity(direction * speed);
+                rigidBody->ApplyForce(direction * speed);
+                rigidBody->ApplyTorque(direction * speed);
                
                 controllableBall->RGBAColour = glm::vec4(10, 10, 0, 1);
             }
@@ -649,6 +644,7 @@ void Update() {
                 throwaway = throwableIndex;
             }
 
+            // HACK
             if (currentMesh->scale.x > 2) {
                 model += glm::translate(glm::mat4x4(1.f), glm::vec3(0.f, 1.5f, 0.f));
             }
@@ -692,7 +688,7 @@ void Update() {
     // Redirect output to an offscreen quad
     if (useFBO)
     {
-        RenderToFBO(window, camera, view, projection,
+        RenderToFBO(window, camera,
             eyeLocationLocation, viewLocation, projectionLocation,
             modelLocaction, modelInverseLocation);
     }
@@ -704,42 +700,15 @@ void Update() {
     timeDiff = currentTime - beginTime;
     frameCount++;
 
-    //const GLubyte* vendor = glad_glGetString(GL_VENDOR); // Returns the vendor
-    const GLubyte* renderer = glad_glGetString(GL_RENDERER); // Returns a hint to the model
-
     if (timeDiff >= 1.f / 30.f) {
         std::string frameRate = std::to_string((1.f / timeDiff) * frameCount);
         std::string frameTime = std::to_string((timeDiff / frameCount) * 1000);
 
         std::stringstream ss;
-        if (theEditMode == MOVING_SELECTED_OBJECT) {
-            ss << " Camera: " << "(" << camera->position.x << ", " << camera->position.y << ", " << camera->position.z << ")"
-               << "    GPU: " << renderer
-               << "    FPS: " << frameRate << " ms: " << frameTime
-               << "    Target: Index = " << object_index << ", MeshName: " << meshArray[object_index]->friendlyName << ", Position: (" << meshArray[object_index]->position.x << ", " << meshArray[object_index]->position.y << ", " << meshArray[object_index]->position.z << ")"
-               ;
-        }
-        else if (theEditMode == MOVING_LIGHT) {
-            ss << " Camera: " << "(" << camera->position.x << ", " << camera->position.y << ", " << camera->position.z << ")"
-                << "    GPU: " << renderer
-                << "    FPS: " << frameRate << " ms: " << frameTime
-                << "    Light Atten: " << "(" << constLightAtten.x << ", " << constLightAtten.y << ", " << constLightAtten.z << ")"
-                << "    Ambient Light: " << ambientLight
-                ;
-        }
-        else if (theEditMode == TAKE_CONTROL) {
-            ss << " Camera: " << "(" << camera->position.x << ", " << camera->position.y << ", " << camera->position.z << ")"
-                << "    Current Sphere: " << throwableIndex
-                << "    Total Spheres: " << throwables.size();
-               ;
-        }
-        else {
-            ss << " Camera: " << "(" << camera->position.x << ", " << camera->position.y << ", " << camera->position.z << ")"
-               << "    GPU: " << renderer
-               << "    FPS: " << frameRate << " ms: " << frameTime
-               ;
-        }
         
+        ss << " Camera: " << "(" << camera->position.x << ", " << camera->position.y << ", " << camera->position.z << ")"
+            << "    Current Sphere: " << throwableIndex
+            << "    Total Spheres: " << throwables.size();
 
         glfwSetWindowTitle(window, ss.str().c_str());
 
@@ -918,7 +887,7 @@ float RandomFloat(float a, float b) {
     return a + r;
 }
 
-void RenderToFBO(GLFWwindow* window, sCamera* camera, glm::mat4& view, glm::mat4& projection,
+void RenderToFBO(GLFWwindow* window, sCamera* camera,
                  GLuint eyeLocationLocation, GLuint viewLocation, GLuint projectionLocation,
                  GLuint modelLocaction, GLuint modelInverseLocation)
 {
@@ -943,16 +912,16 @@ void RenderToFBO(GLFWwindow* window, sCamera* camera, glm::mat4& view, glm::mat4
     glUniform2f(FBOsizeLocation, (GLfloat)FrameBuffer->width, (GLfloat)FrameBuffer->height);
     glUniform2f(screenSizeLocation, (GLfloat)width, (GLfloat)height);
 
-    projection = glm::perspective(0.6f, ratio, 0.1f, 100.f);
+    camera->projection = glm::perspective(0.6f, ratio, 0.1f, 100.f);
 
     glViewport(0, 0, width, height);
 
-    view = glm::lookAt(camera->position, camera->target, upVector);
+    camera->view = glm::lookAt(camera->position, camera->target, upVector);
 
     // Set eyelocation again
     glUniform4f(eyeLocationLocation, camera->position.x, camera->position.y, camera->position.z, 1.f);
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(camera->view));
+    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(camera->projection));
 
     // Drawing
     GLint bIsFullScreenQuadLocation = glGetUniformLocation(shaderID, "bIsFullScreenQuad");

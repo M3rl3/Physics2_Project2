@@ -22,6 +22,9 @@ namespace physics {
 		virtual void GetRotation(Quaternion& rotation) override;
 		virtual void SetRotation(const Quaternion& rotation) override;
 
+		virtual void GetLinearVelocity(Vector3& velocity) override;
+		virtual void SetLinearVelocity(const Vector3& velocity) override;
+
 		virtual void ApplyForce(const Vector3& force) override;
 		virtual void ApplyImpulse(const Vector3& impulse) override;
 

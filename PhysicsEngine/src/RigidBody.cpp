@@ -65,6 +65,18 @@ namespace physics {
 		// No.
 	}
 
+	void RigidBody::GetLinearVelocity(Vector3& velocity)
+	{
+		CastGLMVec3(bulletRigidBody->getLinearVelocity(), &velocity);
+	}
+
+	void RigidBody::SetLinearVelocity(const Vector3& velocity)
+	{
+		btVector3 btVelocity;
+		CastBulletVector3(velocity, &btVelocity);
+		bulletRigidBody->setLinearVelocity(btVelocity);
+	}
+
 	void RigidBody::ApplyForce(const Vector3& force)
 	{
 		btVector3 btForce;

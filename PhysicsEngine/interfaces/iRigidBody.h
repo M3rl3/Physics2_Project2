@@ -17,6 +17,9 @@ namespace physics
 		virtual void GetRotation(Quaternion& rotation) = 0;
 		virtual void SetRotation(const Quaternion& rotation) = 0;
 
+		virtual void GetLinearVelocity(Vector3& velocity) = 0;
+		virtual void SetLinearVelocity(const Vector3& velocity) = 0;
+
 		virtual void ApplyForce(const Vector3& force) = 0;
 		virtual void ApplyForceAtPoint(const Vector3& force, const Vector3& relativePoint) = 0;
 
