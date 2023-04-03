@@ -1254,7 +1254,9 @@ void HardReset() {
             delete cylinders[i];
         }
         cylinders.clear();
+
         CreateCylinders();
+        CreateStaticBoxes();
     }
 
     if (throwables.size() != 0) {
